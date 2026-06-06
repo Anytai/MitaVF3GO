@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MiTa VF3 GO — Thuê Xe Điện Phong Cách</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Lexend+Deca:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --green:#00E5C0;--green-dark:#00BFA0;--green-glow:rgba(0,229,192,0.15);
@@ -441,6 +442,13 @@ body{background:var(--grad1);}
 <body>
 
 <!-- ===== AUTH SCREEN ===== -->
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="position:fixed;inset:0;z-index:99999;background:rgba(10,15,30,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="width:44px;height:44px;border:3px solid rgba(0,229,192,0.2);border-top-color:#00E5C0;border-radius:50%;animation:spin .8s linear infinite;"></div>
+  <div style="color:#00E5C0;font-size:.95rem;font-weight:600;" id="loading-msg">Đang kết nối...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
 <div id="auth-screen">
   <div class="auth-box">
     <div class="auth-logo">
@@ -472,6 +480,7 @@ body{background:var(--grad1);}
 
     <!-- Admin Login Form -->
     <div class="auth-form" id="admin-login-form">
+      <div class="auth-hint">Demo: tài khoản <strong>admin</strong> / mật khẩu <strong>vf3@2024</strong></div>
       <div class="form-group"><label>Tên đăng nhập</label><input type="text" id="login-user" placeholder="admin" autocomplete="username"></div>
       <div class="form-group"><label>Mật khẩu</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div class="auth-err" id="login-err"></div>
@@ -737,10 +746,15 @@ body{background:var(--grad1);}
     <div class="admin-wrap">
       <h2>⚙️ Quản Trị Hệ Thống</h2>
       <p class="sub">Cập nhật giá, danh sách xe và lịch bận</p>
+      <div id="supabase-warning" style="background:rgba(255,159,28,0.1);border:1px solid rgba(255,159,28,0.35);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:.83rem;line-height:1.7;display:none;">
+        ⚠️ <strong>Chưa cấu hình Supabase!</strong> Data đang lưu tạm — không đồng bộ giữa các thiết bị.<br>
+        Xem hướng dẫn tại tab <strong>⚙️ Kết Nối DB</strong> để thiết lập.
+      </div>
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="showAdminTab('prices')">💰 Bảng Giá</button>
         <button class="admin-tab" onclick="showAdminTab('specs')">🚗 Danh Sách Xe</button>
         <button class="admin-tab" onclick="showAdminTab('busy')">🚫 Lịch Bận</button>
+        <button class="admin-tab" onclick="showAdminTab('dbsetup')" style="border-color:rgba(255,159,28,0.4);color:var(--orange);">⚙️ Kết Nối DB</button>
       </div>
 
       <div class="admin-panel active" id="panel-prices">
@@ -810,6 +824,61 @@ body{background:var(--grad1);}
             </div>
             <div><label>Lý do</label><input type="text" id="busy-reason" placeholder="VD: Bảo dưỡng, sử dụng riêng..."></div>
           </div>
+        </div>
+      </div>
+
+      <!-- DB SETUP PANEL -->
+      <div class="admin-panel" id="panel-dbsetup">
+        <h4 style="color:var(--orange);margin-bottom:16px;">⚙️ Cấu Hình Supabase Database</h4>
+        <div style="background:#0D1A2D;border-radius:12px;padding:20px;border:1px solid rgba(255,159,28,0.2);">
+          <p style="color:var(--muted);font-size:.88rem;line-height:1.8;margin-bottom:16px;">
+            Để data đồng bộ giữa khách và admin, anh cần tạo Supabase project (miễn phí) và điền thông tin vào đây:
+          </p>
+          <div class="form-group"><label>Supabase URL</label>
+            <input type="text" id="sb-url-input" placeholder="https://xxxx.supabase.co" style="font-family:monospace;font-size:.85rem;">
+          </div>
+          <div class="form-group"><label>Supabase Anon Key</label>
+            <input type="text" id="sb-key-input" placeholder="eyJhbGci..." style="font-family:monospace;font-size:.85rem;">
+          </div>
+          <button class="btn btn-primary" onclick="saveSupabaseConfig()" style="margin-top:8px;">💾 Lưu & Kết Nối</button>
+          <div id="sb-test-result" style="margin-top:12px;font-size:.83rem;"></div>
+        </div>
+        <div style="margin-top:20px;background:#0D1A2D;border-radius:12px;padding:20px;border:1px solid rgba(0,229,192,0.1);">
+          <div style="font-size:.85rem;font-weight:700;color:var(--green);margin-bottom:14px;">📋 Hướng Dẫn Tạo Supabase (5 phút)</div>
+          <ol style="color:var(--muted);font-size:.83rem;line-height:2;padding-left:18px;">
+            <li>Vào <a href="https://supabase.com" target="_blank" style="color:var(--green);">supabase.com</a> → Sign up miễn phí</li>
+            <li>Bấm <strong style="color:var(--text);">New Project</strong> → Đặt tên <strong style="color:var(--text);">mita-vf3-go</strong></li>
+            <li>Sau khi tạo xong → vào <strong style="color:var(--text);">Settings → API</strong></li>
+            <li>Copy <strong style="color:var(--text);">Project URL</strong> và <strong style="color:var(--text);">anon/public key</strong> vào ô trên</li>
+            <li>Vào <strong style="color:var(--text);">SQL Editor</strong> → chạy script SQL bên dưới:</li>
+          </ol>
+          <div style="background:#060D1A;border-radius:8px;padding:14px;margin-top:10px;font-family:monospace;font-size:.76rem;color:#00E5C0;line-height:1.8;overflow-x:auto;white-space:pre;">-- Chạy trong Supabase SQL Editor:
+CREATE TABLE IF NOT EXISTS bookings (
+  id TEXT PRIMARY KEY,
+  name TEXT, phone TEXT, addr TEXT, note TEXT,
+  pick_date TEXT, pick_hour TEXT,
+  return_date TEXT, return_hour TEXT,
+  pickup TEXT, rental_type TEXT,
+  hours INT, total BIGINT,
+  status TEXT DEFAULT 'pending',
+  assigned_plate TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS busy_slots (
+  id BIGSERIAL PRIMARY KEY,
+  from_dt TEXT, to_dt TEXT,
+  reason TEXT, plate TEXT DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY, value JSONB
+);
+-- Cho phép đọc/ghi không cần login:
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE busy_slots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all" ON bookings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow all" ON busy_slots FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow all" ON settings FOR ALL USING (true) WITH CHECK (true);</div>
         </div>
       </div>
     </div>
@@ -921,13 +990,20 @@ const ROLE_CONFIG = {
 let currentRole = null;
 let selectedRole = 'guest';
 
-// ===== DATA =====
-let bookings = JSON.parse(localStorage.getItem('vf3_bookings') || '[]');
-let busySlots = JSON.parse(localStorage.getItem('vf3_busy') || '[]');
-let prices = JSON.parse(localStorage.getItem('vf3_prices') || 'null') || {
+// ===== SUPABASE CONFIG =====
+// ⚠️  THAY 2 DÒNG NÀY bằng URL và anon key của project Supabase anh:
+const SUPABASE_URL  = 'https://hxtdbuchmwrvsokxdgzq.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dGRidWNobXdydnNva3hkZ3pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUwMDAwMDAsImV4cCI6MjA1MDAwMDAwMH0.JC-klViX7ollmakLyDnZZAAKEC64emhiMmKsM1ybPSk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== DATA (local cache) =====
+let bookings = [];
+let busySlots = [];
+let prices = {
   weekday:500000, weekend:550000, holiday:620000, hourly:70000,
   delivery:100000, deposit:200000, minHours:2, cancelHours:24
 };
+
 function loadCarsWithPhotos() {
   const raw = JSON.parse(localStorage.getItem('vf3_cars') || 'null');
   if (!raw) return null;
@@ -941,29 +1017,98 @@ let cars = loadCarsWithPhotos() || [
    features:['Camera lùi','Gương chỉnh điện','Màn hình android','Bluetooth','Định vị GPS','Cảm biến lốp','Khe cắm USB','VETC'],
    photos:[null,null,null,null,null]}
 ];
-function save() {
-  localStorage.setItem('vf3_bookings', JSON.stringify(bookings));
-  localStorage.setItem('vf3_busy', JSON.stringify(busySlots));
-  localStorage.setItem('vf3_prices', JSON.stringify(prices));
-  // Save cars without photos in main key (keeps it small)
-  const carsNoPhotos = cars.map(c => { const {photos,...rest}=c; return rest; });
-  try { localStorage.setItem('vf3_cars', JSON.stringify(carsNoPhotos)); } catch(e){}
-  // Save photos per car separately
-  cars.forEach(c => {
-    if (c.photos && c.photos.some(p=>p)) {
-      try { localStorage.setItem('vf3_photos_'+c.id, JSON.stringify(c.photos)); } catch(e) {
-        console.warn('Photo storage full for', c.id);
-      }
-    }
-  });
+
+// ===== LOADING HELPERS =====
+function showLoading(msg='Đang xử lý...') {
+  const ol = document.getElementById('loading-overlay');
+  const lm = document.getElementById('loading-msg');
+  if(ol) ol.style.display='flex';
+  if(lm) lm.textContent = msg;
+}
+function hideLoading() {
+  const ol = document.getElementById('loading-overlay');
+  if(ol) ol.style.display='none';
 }
 
-function loadCarsWithPhotos() {
-  const raw = JSON.parse(localStorage.getItem('vf3_cars') || 'null');
-  if (!raw) return null;
-  return raw.map(c => {
-    const photos = JSON.parse(localStorage.getItem('vf3_photos_'+c.id) || 'null') || [null,null,null,null,null];
-    return {...c, photos};
+// ===== SUPABASE LOAD ALL DATA =====
+async function loadAllData() {
+  showLoading('Đang tải dữ liệu...');
+  try {
+    // Load bookings
+    const {data:bkData, error:bkErr} = await sb.from('bookings').select('*').order('created_at', {ascending:false});
+    if (!bkErr && bkData) bookings = bkData.map(r => ({
+      id: r.id, name: r.name, phone: r.phone, addr: r.addr, note: r.note||'',
+      pickDate: r.pick_date, pickHour: r.pick_hour,
+      returnDate: r.return_date, returnHour: r.return_hour,
+      pickup: r.pickup, rentalType: r.rental_type||'',
+      hours: r.hours||0, total: r.total||0,
+      status: r.status||'pending',
+      assignedPlate: r.assigned_plate||'',
+      createdAt: r.created_at
+    }));
+
+    // Load busy slots
+    const {data:bsData, error:bsErr} = await sb.from('busy_slots').select('*').order('from_dt', {ascending:true});
+    if (!bsErr && bsData) busySlots = bsData.map(r => ({
+      _id: r.id, from: r.from_dt, to: r.to_dt,
+      reason: r.reason||'Xe bận', plate: r.plate||''
+    }));
+
+    // Load prices / settings
+    const {data:prData} = await sb.from('settings').select('*').eq('key','prices').single();
+    if (prData?.value) prices = {...prices, ...prData.value};
+
+  } catch(e) {
+    console.error('Load error:', e);
+  }
+  hideLoading();
+}
+
+// ===== SUPABASE SAVE FUNCTIONS =====
+async function saveBooking(booking) {
+  const row = {
+    id: booking.id, name: booking.name, phone: booking.phone,
+    addr: booking.addr, note: booking.note||'',
+    pick_date: booking.pickDate, pick_hour: booking.pickHour,
+    return_date: booking.returnDate, return_hour: booking.returnHour,
+    pickup: booking.pickup, rental_type: booking.rentalType||'',
+    hours: booking.hours, total: booking.total,
+    status: booking.status,
+    assigned_plate: booking.assignedPlate||'',
+    created_at: booking.createdAt
+  };
+  const {error} = await sb.from('bookings').upsert(row, {onConflict:'id'});
+  if(error) console.error('Save booking error:', error);
+}
+
+async function saveBusySlot(slot) {
+  const row = {
+    from_dt: slot.from, to_dt: slot.to,
+    reason: slot.reason||'Xe bận', plate: slot.plate||''
+  };
+  if(slot._id) row.id = slot._id;
+  const {data,error} = await sb.from('busy_slots').upsert(row, {onConflict:'id'}).select().single();
+  if(error) console.error('Save busy error:', error);
+  if(data) slot._id = data.id;
+}
+
+async function deleteBusySlotDB(id) {
+  if(!id) return;
+  await sb.from('busy_slots').delete().eq('id', id);
+}
+
+async function savePricesToDB() {
+  await sb.from('settings').upsert({key:'prices', value:prices}, {onConflict:'key'});
+}
+
+// Legacy save() — kept for cars/photos (localStorage only)
+function save() {
+  const carsNoPhotos = cars.map(c => { const {photos,...rest}=c; return rest; });
+  try { localStorage.setItem('vf3_cars', JSON.stringify(carsNoPhotos)); } catch(e){}
+  cars.forEach(c => {
+    if (c.photos && c.photos.some(p=>p)) {
+      try { localStorage.setItem('vf3_photos_'+c.id, JSON.stringify(c.photos)); } catch(e) {}
+    }
   });
 }
 
@@ -1015,7 +1160,7 @@ function doLogin() {
   }
 }
 
-function launchApp(role) {
+async function launchApp(role) {
   currentRole = role;
   const cfg = ROLE_CONFIG[role];
 
@@ -1033,9 +1178,20 @@ function launchApp(role) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('main-app').classList.add('show');
 
+  // Load fresh data from Supabase
+  await loadAllData();
   showPage(cfg.defaultPage);
   updateStats();
   animateStat();
+
+  // Auto-refresh every 30s for admin
+  if(role === 'admin') {
+    setInterval(async () => {
+      await loadAllData();
+      updateStats();
+      if(document.getElementById('page-manage').classList.contains('active')) renderTable();
+    }, 30000);
+  }
 
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('pick-date').min = today;
@@ -1367,7 +1523,7 @@ function setupAdminInputs() {
 }
 
 
-function submitBooking() {
+async function submitBooking() {
   const name=document.getElementById('cus-name').value.trim();
   const phone=document.getElementById('cus-phone').value.trim();
   const addr=document.getElementById('cus-addr').value.trim();
@@ -1390,9 +1546,13 @@ function submitBooking() {
     pickup:pickup==='delivery'?'Giao tận nhà':'Đến nhà chủ xe',
     rentalType: typeLabel,
     hours:parseInt(hours)||0, total:parseInt(total)||0,
-    status:'pending', createdAt:new Date().toISOString()
+    status:'pending', createdAt:new Date().toISOString(),
+    assignedPlate:''
   };
-  bookings.unshift(booking); save(); updateStats();
+  showLoading('Đang gửi đặt lịch...');
+  await saveBooking(booking);
+  bookings.unshift(booking); updateStats();
+  hideLoading();
   document.getElementById('modal-text').innerHTML=
     `<strong>${name}</strong> đã đặt xe thành công!<br>
      Nhận xe: <strong>${pd} ${selectedPickHour}</strong> — Trả: <strong>${rd} ${rt}</strong><br>
@@ -1474,19 +1634,30 @@ function renderTable() {
   });
 }
 
-function changeStatus(id, newStatus) {
+async function changeStatus(id, newStatus) {
   const b=bookings.find(x=>x.id===id);
-  if(b){b.status=newStatus;save();updateStats();renderTable();showToast('Đã cập nhật trạng thái!');}
+  if(b){
+    b.status=newStatus;
+    showLoading('Đang cập nhật...');
+    await saveBooking(b);
+    hideLoading();
+    updateStats();renderTable();showToast('Đã cập nhật trạng thái!');
+  }
 }
-function assignPlate(id, plate) {
+async function assignPlate(id, plate) {
   const b=bookings.find(x=>x.id===id);
-  if(b){b.assignedPlate=plate||'';save();if(plate)showToast('Đã gán xe '+plate+' cho đặt lịch này!');}
+  if(b){
+    b.assignedPlate=plate||'';
+    await saveBooking(b);
+    if(plate)showToast('Đã gán xe '+plate+'!');
+    renderTable();
+  }
 }
 
 // ===== ADMIN TABS =====
 function showAdminTab(tab) {
   document.querySelectorAll('.admin-tab').forEach((t,i)=>{
-    const tabs=['prices','specs','busy'];
+    const tabs=['prices','specs','busy','dbsetup'];
     t.classList.toggle('active',tabs[i]===tab);
   });
   document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
@@ -1536,14 +1707,16 @@ function previewPrices() {
   s('ph-hourly',fmtP(h));
 }
 
-function savePrices() {
+async function savePrices() {
   prices.weekday=parseInput(document.getElementById('price-weekday').value)||500000;
   prices.weekend=parseInput(document.getElementById('price-weekend').value)||550000;
   prices.holiday=parseInput(document.getElementById('price-holiday').value)||620000;
   prices.hourly=parseInput(document.getElementById('price-hourly').value)||70000;
   prices.delivery=parseInput(document.getElementById('price-delivery').value)||100000;
-  save();
-  showToast('Đã lưu & áp dụng giá mới lên trang đặt xe!');
+  showLoading('Đang lưu bảng giá...');
+  await savePricesToDB();
+  hideLoading();
+  showToast('Đã lưu & áp dụng giá mới!');
 }
 
 // ===== CAR MANAGEMENT =====
@@ -1702,15 +1875,19 @@ function renderBusyList() {
     </div>`).join('');
 }
 
-function addBusy() {
+async function addBusy() {
   const from=document.getElementById('busy-from').value;
   const to=document.getElementById('busy-to').value;
   const reason=document.getElementById('busy-reason').value.trim();
   const plate=document.getElementById('busy-plate')?.value||'';
   if(!from||!to){showToast('Chọn thời gian bận!',true);return;}
   if(new Date(from)>=new Date(to)){showToast('Thời gian không hợp lệ!',true);return;}
-  busySlots.push({from,to,reason:reason||'Xe bận',plate});
-  save();renderBusyList();
+  const slot={from,to,reason:reason||'Xe bận',plate};
+  showLoading('Đang lưu lịch bận...');
+  await saveBusySlot(slot);
+  busySlots.push(slot);
+  hideLoading();
+  renderBusyList();
   document.getElementById('busy-from').value='';
   document.getElementById('busy-to').value='';
   document.getElementById('busy-reason').value='';
@@ -1718,7 +1895,15 @@ function addBusy() {
   showToast('Đã thêm lịch bận!');
 }
 
-function deleteBusy(i) { busySlots.splice(i,1);save();renderBusyList();showToast('Đã xoá lịch bận.'); }
+async function deleteBusy(i) {
+  const slot = busySlots[i];
+  showLoading('Đang xóa...');
+  await deleteBusySlotDB(slot._id);
+  busySlots.splice(i,1);
+  hideLoading();
+  renderBusyList();
+  showToast('Đã xoá lịch bận.');
+}
 
 // ===== TOAST =====
 function showToast(msg, isErr) {
@@ -1773,6 +1958,7 @@ function renderLandingCarDetail() {
             <div class="car-spec-item"><div class="car-spec-key">Tiêu hao</div><div class="car-spec-val">${car.fuel||'—'}</div></div>
           </div>
           ${ft?`<div class="car-detail-features"><div class="car-detail-features-title">✨ Tính năng</div><div class="car-detail-tags">${ft}</div></div>`:''}
+          <button class="btn btn-primary car-detail-btn" onclick="showPage('booking')">🗓 Đặt Xe Này Ngay</button>
         </div>
       </div>
     </div>`;
@@ -1786,6 +1972,50 @@ function switchCarPhoto(carId, idx) {
   document.querySelectorAll(`[id^="thumb-${carId}-"]`).forEach(el=>el.classList.remove('active'));
   const thumb=document.getElementById(`thumb-${carId}-${idx}`);
   if(thumb)thumb.classList.add('active');
+}
+
+// ===== SUPABASE RUNTIME CONFIG =====
+(function(){
+  // Load saved config from localStorage
+  const savedUrl = localStorage.getItem('sb_url');
+  const savedKey = localStorage.getItem('sb_key');
+  if(savedUrl && savedKey && savedUrl !== 'https://hxtdbuchmwrvsokxdgzq.supabase.co') {
+    // Re-init supabase client with saved config
+    try {
+      Object.assign(sb, supabase.createClient(savedUrl, savedKey));
+    } catch(e){}
+  }
+  // Show warning if not configured
+  if(!savedUrl || savedUrl === 'https://hxtdbuchmwrvsokxdgzq.supabase.co') {
+    const warn = document.getElementById('supabase-warning');
+    if(warn) warn.style.display='block';
+  }
+})();
+
+async function saveSupabaseConfig() {
+  const url = document.getElementById('sb-url-input').value.trim();
+  const key = document.getElementById('sb-key-input').value.trim();
+  const result = document.getElementById('sb-test-result');
+  if(!url || !key) { result.innerHTML='<span style="color:var(--red);">❌ Vui lòng điền đủ URL và Key</span>'; return; }
+  result.innerHTML='<span style="color:var(--muted);">🔄 Đang kiểm tra kết nối...</span>';
+  try {
+    const testClient = supabase.createClient(url, key);
+    const {error} = await testClient.from('settings').select('key').limit(1);
+    if(error && error.code !== 'PGRST116') throw error;
+    // Save config
+    localStorage.setItem('sb_url', url);
+    localStorage.setItem('sb_key', key);
+    // Reinit global client
+    const newSb = supabase.createClient(url, key);
+    Object.keys(newSb).forEach(k => { try{ sb[k]=newSb[k]; }catch(e){} });
+    result.innerHTML='<span style="color:var(--green);">✅ Kết nối thành công! Đang tải dữ liệu...</span>';
+    document.getElementById('supabase-warning').style.display='none';
+    await loadAllData();
+    updateStats();
+    result.innerHTML='<span style="color:var(--green);">✅ Đã kết nối & đồng bộ dữ liệu!</span>';
+  } catch(e) {
+    result.innerHTML=`<span style="color:var(--red);">❌ Lỗi: ${e.message}</span>`;
+  }
 }
 
 // ===== SLIDESHOW =====
