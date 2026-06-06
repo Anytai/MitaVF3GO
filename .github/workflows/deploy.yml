@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
@@ -13,14 +15,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject Supabase config into HTML
+      - name: Inject Supabase config
         run: |
           sed -i "s|SUPABASE_URL_HERE|${{ secrets.SUPABASE_URL }}|g" index.html
           sed -i "s|SUPABASE_ANON_KEY_HERE|${{ secrets.SUPABASE_KEY }}|g" index.html
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
