@@ -39,7 +39,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--navy);color:var(--
 .auth-logo .ev{background:var(--green);color:var(--navy);font-size:.6rem;font-weight:800;padding:3px 8px;border-radius:20px;}
 .auth-title{text-align:center;font-size:1.1rem;font-weight:700;margin-bottom:6px;}
 .auth-sub{text-align:center;color:var(--muted);font-size:.88rem;margin-bottom:28px;}
-.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+.role-cards{display:block;margin-bottom:24px;}
 .role-card{
   padding:18px 14px;border-radius:12px;border:2px solid rgba(255,255,255,0.07);
   cursor:pointer;text-align:center;transition:all .22s;
@@ -458,24 +458,19 @@ body{background:var(--grad1);}
         <div style="font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;">Xe Tự Lái ⚡ Điện</div>
       </div>
     </div>
-    <div class="auth-title">Chào mừng trở lại!</div>
-    <div class="auth-sub">Chọn vai trò để tiếp tục</div>
+    <div class="auth-title">MiTa VF3 GO ⚡</div>
+    <div class="auth-sub">Thuê xe điện phong cách — Đặt lịch trong 60 giây</div>
 
     <!-- Role Selection -->
     <div id="role-select-view">
-      <div class="role-cards">
-        <div class="role-card" id="card-guest" onclick="selectRole('guest')">
-          <div class="icon">🙋</div>
-          <div class="rlabel">Khách thuê xe</div>
-          <div class="rdesc">Đặt lịch thuê VF3</div>
-        </div>
-        <div class="role-card" id="card-admin" onclick="selectRole('admin')">
-          <div class="icon">🔐</div>
-          <div class="rlabel">Quản trị viên</div>
-          <div class="rdesc">Quản lý hệ thống</div>
-        </div>
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:2.5rem;margin-bottom:12px;">🚗</div>
+        <div style="font-size:1rem;color:var(--muted);line-height:1.6;">Chào mừng đến với <strong style="color:var(--text);">MiTa VF3 GO</strong><br>Đặt lịch thuê xe điện nhanh chóng!</div>
       </div>
-      <button class="btn btn-primary btn-block" onclick="proceedRole()" style="margin-top:0;">Tiếp tục →</button>
+      <button class="btn btn-primary btn-block" onclick="launchApp('guest')" style="margin-top:0;padding:15px;font-size:1rem;">🗓 Đặt Lịch Thuê Xe →</button>
+      <div style="text-align:center;margin-top:16px;">
+        <span onclick="showAdminLogin()" style="color:var(--muted);font-size:.75rem;cursor:pointer;opacity:.4;">⚙</span>
+      </div>
     </div>
 
     <!-- Admin Login Form -->
@@ -1145,6 +1140,11 @@ function backToRoles() {
   document.getElementById('role-select-view').style.display = 'block';
   document.getElementById('login-err').textContent = '';
 }
+function showAdminLogin() {
+  document.getElementById('role-select-view').style.display = 'none';
+  document.getElementById('admin-login-form').classList.add('show');
+  setTimeout(() => document.getElementById('login-user').focus(), 100);
+}
 
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
@@ -1200,16 +1200,16 @@ async function launchApp(role) {
 
 function logout() {
   currentRole = null;
-  // Reset auth UI
   document.getElementById('admin-login-form').classList.remove('show');
   document.getElementById('role-select-view').style.display = 'block';
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
   document.getElementById('login-err').textContent = '';
-  selectRole('guest');
-  // Hide app
+  // Hide app, go straight to guest
   document.getElementById('main-app').classList.remove('show');
   document.getElementById('auth-screen').style.display = 'flex';
+  // Auto launch as guest after small delay
+  setTimeout(() => launchApp('guest'), 100);
 }
 
 // ===== PAGE NAV =====
